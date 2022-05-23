@@ -1,11 +1,13 @@
 package com.java.netty.demo01.nettybasic.net;
 
+import com.java.netty.demo01.util.SplitSolve;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -19,6 +21,73 @@ import static com.java.netty.demo01.util.ByteBufferUtil.debugRead;
 @Slf4j
 public class Server {
     public static void main(String[] args) throws IOException {
+        //消息边界问题
+        Selector selector = Selector.open();
+        ServerSocketChannel server = ServerSocketChannel.open();
+        server.configureBlocking(false);
+
+        SelectionKey serverKey = server.register(selector, 0, null);
+        log.debug("register key: {}", serverKey);
+
+        serverKey.interestOps(SelectionKey.OP_ACCEPT);
+        server.bind(new InetSocketAddress(8080));
+
+        while(true) {
+            selector.select();
+
+            Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();//selectedKeys方法拿到所有可用事件的集合，是一个Set集合
+            while (iterator.hasNext()) {
+                SelectionKey key = iterator.next();
+                iterator.remove();
+                log.debug("select key: {}", key);
+
+                if (key.isAcceptable()) {
+                    ServerSocketChannel channel = (ServerSocketChannel) key.channel();
+                    SocketChannel accept = channel.accept();
+                    accept.configureBlocking(false);
+                    //bytebuffer不能是每次读取事件的局部变量，但也不能放在while(true)循环的外面，这样会被所有channel共享，分不清消息的来源
+                    //所以，这就需要使用到register的第三个参数，att，指attachment附件，每个channel携带的部分
+                    ByteBuffer buffer = ByteBuffer.allocate(16);
+                    SelectionKey acceptKey = accept.register(selector, 0, buffer);
+                    acceptKey.interestOps(SelectionKey.OP_READ);
+                    log.debug("socket: {}", accept);
+                    log.debug("acceptKey: {}", acceptKey);
+                } else if(key.isReadable()){
+                    try {
+                        SocketChannel channel = (SocketChannel) key.channel();
+                        //通过key.attachment()方法获取每个key携带的附件
+                        ByteBuffer buffer = (ByteBuffer) key.attachment();
+                        int read = channel.read(buffer);
+                        if(read == -1) {
+                            key.cancel();
+                        } else {
+                            //这里就可以使用之前写过的split方法解决半包，黏包问题
+                            SplitSolve.split(buffer);
+                            //调用完split方法之后就需要判断一下buffer是否需要扩容，由于在split方法的最后调用了buffer.compact()方法
+                            //compact()方法会保留未读的部分，如果在一次读取中没有发现“\n”分隔符，那么未读的部分就是整个buffer串，调用
+                            //compact()方法之后，buffer的position指针就会指向维度部分，在这里就是buffer的末尾，所以可以通过position的位置判断buffer是否需要扩容
+                            if(buffer.position() == buffer.limit()) {
+                                //扩容为原来容量的两倍
+                                ByteBuffer newBuffer = ByteBuffer.allocate(buffer.capacity() * 2);
+                                buffer.flip();
+                                //将之前buffer的内容拷贝到新的buffer中
+                                newBuffer.put(buffer);
+                                //可以使用attach方法将key之前所关联的附件替换掉
+                                key.attach(newBuffer);
+                            }
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        key.cancel();
+                    }
+
+                }
+            }
+        }
+
+    }
+
+    private static void disConnected() throws IOException {
         //selector处理客户端连接断开的情况
         Selector selector = Selector.open();
         ServerSocketChannel server = ServerSocketChannel.open();
