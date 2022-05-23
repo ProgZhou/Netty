@@ -19,6 +19,56 @@ import static com.java.netty.demo01.util.ByteBufferUtil.debugRead;
 @Slf4j
 public class Server {
     public static void main(String[] args) throws IOException {
+        //selector处理客户端连接断开的情况
+        Selector selector = Selector.open();
+        ServerSocketChannel server = ServerSocketChannel.open();
+        server.configureBlocking(false);
+
+        SelectionKey serverKey = server.register(selector, 0, null);
+        log.debug("register key: {}", serverKey);
+
+        serverKey.interestOps(SelectionKey.OP_ACCEPT);
+        server.bind(new InetSocketAddress(8080));
+
+        while(true) {
+            selector.select();
+
+            Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();//selectedKeys方法拿到所有可用事件的集合，是一个Set集合
+            while (iterator.hasNext()) {
+                SelectionKey key = iterator.next();
+                iterator.remove();
+                log.debug("select key: {}", key);
+
+                if (key.isAcceptable()) {
+                    ServerSocketChannel channel = (ServerSocketChannel) key.channel();
+                    SocketChannel accept = channel.accept();
+                    accept.configureBlocking(false);
+                    SelectionKey acceptKey = accept.register(selector, 0, null);
+                    acceptKey.interestOps(SelectionKey.OP_READ);
+                    log.debug("socket: {}", accept);
+                    log.debug("acceptKey: {}", acceptKey);
+                } else if(key.isReadable()){
+                    try {
+                        SocketChannel channel = (SocketChannel) key.channel();
+                        ByteBuffer buffer = ByteBuffer.allocate(16);
+                        int read = channel.read(buffer);
+                        if(read == -1) {
+                            key.cancel();
+                        } else {
+                            buffer.flip();
+                            debugRead(buffer);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        key.cancel();
+                    }
+
+                }
+            }
+        }
+    }
+
+    private static void processRead() throws IOException {
         //使用selector处理客户端的读事件
         //添加selector解决非阻塞模式下的性能消耗问题
 
