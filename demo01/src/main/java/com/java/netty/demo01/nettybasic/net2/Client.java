@@ -14,12 +14,14 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class Client {
     public static void main(String[] args) throws IOException {
-        SocketChannel client = SocketChannel.open();
+        for (int i = 0; i < 6; i++) {
+            SocketChannel client = SocketChannel.open();
 
-        client.connect(new InetSocketAddress("localhost", 8080));
+            client.connect(new InetSocketAddress("localhost", 8080));
 
-        client.write(StandardCharsets.UTF_8.encode("0123456789abcdef"));
+            client.write(StandardCharsets.UTF_8.encode("0123456789abcdef"));
 
-        log.debug("waiting...");
+            log.debug("waiting...");
+        }
     }
 }
