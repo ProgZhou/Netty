@@ -1,4 +1,4 @@
-package com.java.netty.demo01.nettybasic.net;
+package com.java.netty.demo01.nio.net;
 
 import lombok.extern.slf4j.Slf4j;
 

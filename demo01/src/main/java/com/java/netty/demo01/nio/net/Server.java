@@ -1,4 +1,4 @@
-package com.java.netty.demo01.nettybasic.net;
+package com.java.netty.demo01.nio.net;
 
 import com.java.netty.demo01.util.SplitSolve;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
