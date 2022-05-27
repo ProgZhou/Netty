@@ -1,4 +1,4 @@
-package com.java.netty.demo01.nettybasic;
+package com.java.netty.demo01.nettybasic.net2;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.TimeUnit;
 
-/**EventLoop测试
+/**EventLoop基本使用
  * @author ProgZhou
  * @createTime 2022/05/26
  */
