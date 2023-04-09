@@ -1,10 +1,13 @@
 package com.java.netty.demo01.nettybasic.net3;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
@@ -30,7 +33,9 @@ public class PipelineTest {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception{
                                 log.debug("input data1...");
-                                super.channelRead(ctx , msg);
+                                ByteBuf buf = (ByteBuf) msg;
+                                String name = buf.toString(StandardCharsets.UTF_8);
+                                super.channelRead(ctx , name);  //将当前处理好的数据交给下一个入站处理器
                             }
                         });
                         pipeline.addLast("h2", new ChannelInboundHandlerAdapter(){
@@ -38,7 +43,10 @@ public class PipelineTest {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception{
                                 log.debug("input data2...");
-                                super.channelRead(ctx , msg);
+                                //可以对接收到的数据进行进一步处理，比如封装成一个类
+                                String name = msg.toString();
+                                Student student = new Student(name);
+                                super.channelRead(ctx , student);
                             }
                         });
                         pipeline.addLast("h3", new ChannelInboundHandlerAdapter(){
@@ -46,7 +54,8 @@ public class PipelineTest {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception{
                                 log.debug("input data3...");
-                                super.channelRead(ctx , msg);
+                                log.debug("最终数据：{}, 数据类型：{}", msg, msg.getClass());
+//                                super.channelRead(ctx , msg);
                                 nioSocketChannel.writeAndFlush(ctx.alloc().buffer().writeBytes("123".getBytes(StandardCharsets.UTF_8)));
 
                             }
@@ -83,5 +92,11 @@ public class PipelineTest {
 
                 })
                 .bind(8080);
+    }
+
+    @Data
+    @AllArgsConstructor
+    static class Student {
+        private String name;
     }
 }
