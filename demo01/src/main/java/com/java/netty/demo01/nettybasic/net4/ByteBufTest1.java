@@ -67,7 +67,7 @@ public class ByteBufTest1 {
      * 调试方法，打印ByteBuf中的具体情况
      * @param buffer
      */
-    private static void log(ByteBuf buffer) {
+    public static void log(ByteBuf buffer) {
         int length = buffer.readableBytes();
         int rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
         StringBuilder buf = new StringBuilder(rows * 80 * 2)
